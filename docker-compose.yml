@@ -186,6 +186,79 @@ services:
 
       start_period: 5s
 
+  adminer:
+    image: adminer:latest
+    container_name: realestate-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # ── migrate ──────────────────────────────────────────────────────────
+  # A ONE-OFF task, not a long-running server. It boots, does its job
+  # (create tables + seed data), and exits. It never needs to be "always on"
+  # like postgres/qdrant/redis, so it's structured differently from them.
+  migrate:
+    image: python:3.12-slim
+    # Plain python:3.12-slim, not a custom-built image — we don't have our
+    # own Dockerfile yet (that comes when the gateway becomes a real app in
+    # Phase 1/Day 7). For a throwaway setup task, a stock image + pip install
+    # at runtime is fine; we're not optimizing image build time here.
+    container_name: realestate-migrate
+ 
+    profiles: ["tools"]
+    # THIS IS THE KEY LINE. Any service tagged with a profile is IGNORED by
+    # a plain `docker compose up`. Without this, migrate would try to start
+    # every time you bring the stack up, re-run pip install + reseed data,
+    # and slow down (or duplicate-seed) your normal dev loop. Tagging it
+    # "tools" means: only runs when explicitly asked for.
+ 
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Don't just wait for the postgres CONTAINER to exist — wait for its
+    # healthcheck to pass. Without `condition: service_healthy`, Compose
+    # would only guarantee postgres has started, not that it's actually
+    # accepting connections yet — migrate would race it and fail.
+ 
+    working_dir: /app
+    volumes:
+      - ./:/app
+    # These two lines together mean: take my entire repo (the `.` on my
+    # host) and mount it at /app INSIDE the container, then cd into /app.
+    # This is why we don't need to COPY files into a custom image — the
+    # container just sees your live repo directly. Edit a file on your
+    # host, it's immediately visible inside the container on next run.
+ 
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-realestate}:${POSTGRES_PASSWORD:-realestate}@postgres:5432/${POSTGRES_DB:-realestate}
+    # Notice the hostname here is "postgres" — the COMPOSE SERVICE NAME —
+    # not "localhost". Docker Compose gives every service a DNS entry equal
+    # to its service name, reachable only from OTHER containers on the same
+    # compose network. This is the whole reason migrate exists as a
+    # container instead of a script on your host: your host reaches
+    # Postgres via localhost:5432 (published port), but every other
+    # container (gateway, worker, migrate) reaches it via postgres:5432
+    # (internal network). This env line matches what your REAL gateway
+    # service will use later — that's the point of testing it now.
+ 
+    command: >
+      sh -c "pip install --quiet -r requirements-day2.txt &&
+             python services/gateway/models.py &&
+             python services/gateway/seed_data.py"
+    # Three steps chained with && (each must succeed before the next runs):
+    #   1. Install sqlalchemy/psycopg2/Faker inside the container (the
+    #      stock python:3.11-slim image has none of these by default)
+    #   2. Run models.py — calls Base.metadata.create_all(), which is
+    #      IDEMPOTENT: creates tables only if missing, does nothing if they
+    #      already exist. Safe to re-run this whole service anytime.
+    #   3. Run seed_data.py — inserts 1000 units + writes 30 sample docs.
+    #      NOT idempotent yet (re-running adds another 1000 rows) — worth
+    #      remembering as a known gap, not something to fix today.
+
+
 volumes:
 
   # Named Docker volume.

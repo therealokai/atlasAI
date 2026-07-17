@@ -23,11 +23,11 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 - [x] Build log entry
 
 ### Day 2 — Seed data
-- [ ] Write Postgres schema: `units`, `conversations` tables (minimal columns — you'll extend in Phase 2)
-- [ ] Write a synthetic-data generator: 500–2,000 fake real-estate units (city, price, beds, type)
-- [ ] Load 20–50 sample "documents" (can be plain text stand-ins for brochures/payment plans for now — real chunking is Phase 2)
-- [ ] Verify via `psql`: `SELECT count(*) FROM units;` returns expected count
-- [ ] Build log entry
+- [x] Write Postgres schema: `units`, `conversations` tables (minimal columns — you'll extend in Phase 2)
+- [x] Write a synthetic-data generator: 500–2,000 fake real-estate units (city, price, beds, type)
+- [x] Load 20–50 sample "documents" (can be plain text stand-ins for brochures/payment plans for now — real chunking is Phase 2)
+- [x] Verify via `psql`: `SELECT count(*) FROM units;` returns expected count
+- [x] Build log entry
 
 ### Day 3 — CI + observability skeleton
 - [ ] Add CI config (GitHub Actions or similar): lint step + placeholder unit test + docker build step
