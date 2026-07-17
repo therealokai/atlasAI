@@ -1,0 +1,200 @@
+services:
+  postgres:
+    # Official PostgreSQL image from Docker Hub.
+    image: postgres:16
+
+    # Fixed container name instead of Docker generating a random one.
+    container_name: realestate-postgres
+
+    # Automatically restart the container unless it was explicitly stopped.
+    #
+    # Possible values:
+    #   no              -> Never restart (default)
+    #   always          -> Always restart, even after manual stop
+    #   on-failure      -> Restart only if the container exits with an error
+    #   unless-stopped  -> Restart after reboot unless I manually stopped it
+    restart: unless-stopped
+
+    environment:
+      # Environment variables used by the PostgreSQL image during initialization.
+      #
+      # Syntax:
+      #   ${VARIABLE:-default}
+      #
+      # Means:
+      #   Use VARIABLE if it exists.
+      #   Otherwise use the value after ':'.
+      POSTGRES_USER: ${POSTGRES_USER:-realestate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-realestate}
+      POSTGRES_DB: ${POSTGRES_DB:-realestate}
+
+    ports:
+      - "5433:5432"
+
+      # Port mapping format:
+      #
+      #     HOST_PORT : CONTAINER_PORT
+      #
+      # Left side (5433):
+      #   Port exposed on my laptop.
+      #
+      # Right side (5432):
+      #   Port PostgreSQL listens to INSIDE the container.
+      #
+      # Requests flow like this:
+      #
+      # localhost:5433
+      #       │
+      #       ▼
+      # PostgreSQL container:5432
+      #
+      # My Ubuntu host already uses port 5432,
+      # so Docker exposes PostgreSQL on 5433 instead.
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+      # Persist PostgreSQL data.
+      #
+      # Without this volume:
+      # Removing the container deletes the database.
+      #
+      # With this volume:
+      # Data survives container recreation.
+
+    healthcheck:
+
+      # Command executed periodically to determine
+      # whether the container is actually ready.
+      #
+      # IMPORTANT:
+      # Running != Healthy
+      #
+      # PostgreSQL may take several seconds before
+      # accepting client connections.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-realestate} -d ${POSTGRES_DB:-realestate}"]
+
+      # Wait 5 seconds between each health check.
+      interval: 5s
+
+      # If the command takes longer than 5 seconds,
+      # mark that attempt as failed.
+      timeout: 5s
+
+      # After 10 consecutive failures,
+      # Docker marks the container as Unhealthy.
+      retries: 10
+
+      # Ignore health check failures during startup.
+      #
+      # Gives PostgreSQL time to initialize before
+      # Docker starts evaluating its health.
+      start_period: 10s
+
+  qdrant:
+    # Official Qdrant vector database image.
+    image: qdrant/qdrant:latest
+
+    container_name: realestate-qdrant
+
+    restart: unless-stopped
+
+    ports:
+      - "6333:6333"
+
+      # REST API
+      #
+      # Used by:
+      # - Python client
+      # - Dashboard
+      # - FastAPI
+      # - Browser
+
+      - "6334:6334"
+
+      # gRPC API
+      #
+      # Faster binary protocol than REST.
+      # Mainly used in production or high-performance systems.
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+      # Persist vector embeddings and indexes.
+
+    healthcheck:
+
+      # Open a TCP connection to port 6333.
+      #
+      # If connection succeeds:
+      #   Healthy
+      #
+      # Otherwise:
+      #   Unhealthy
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/6333'"]
+
+      # Run every 5 seconds.
+      interval: 5s
+
+      # Maximum execution time for one health check.
+      timeout: 5s
+
+      # Number of failures before marking unhealthy.
+      retries: 10
+
+      # Ignore failures during initial startup.
+      start_period: 10s
+
+  redis:
+    # Lightweight Redis image based on Alpine Linux.
+    image: redis:7-alpine
+
+    container_name: realestate-redis
+
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+      # Default Redis port.
+
+    volumes:
+      - redis_data:/data
+
+      # Persist Redis data if persistence (RDB/AOF)
+      # is enabled.
+
+    healthcheck:
+
+      # Ask Redis:
+      #
+      # PING
+      #
+      # Expected response:
+      #
+      # PONG
+      #
+      # If PONG is returned:
+      # Healthy.
+      test: ["CMD", "redis-cli", "ping"]
+
+      interval: 5s
+
+      timeout: 5s
+
+      retries: 10
+
+      start_period: 5s
+
+volumes:
+
+  # Named Docker volume.
+  #
+  # Stored outside containers.
+  #
+  # Deleting a container does NOT delete this volume.
+  postgres_data:
+
+  qdrant_data:
+
+  redis_data:

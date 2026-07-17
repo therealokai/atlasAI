@@ -12,3 +12,21 @@
 
 
     
+- Day 1:
+    - built project monoskeleton for the project with command:
+        ```bash
+        mkdir -p services/gateway services/router services/worker \
+         mcp deploy experiments eval docs
+         ```
+    - created .env file, a copy from .env.example
+    - built `docker-compose.yml` file with 3 services (postgres,qdrant,redis) and tested it with commands:
+        ```bash
+        # Postgres
+        docker exec -it realestate-postgres psql -U realestate -d realestate -c "\dt"
+
+        # Qdrant — open in browser
+        open http://localhost:6333/dashboard   # (or just curl http://localhost:6333/collections)
+
+        # Redis
+        docker exec -it realestate-redis redis-cli ping   # should return PONG
+        ```
