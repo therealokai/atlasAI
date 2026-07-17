@@ -16,11 +16,11 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 ## PHASE 0 — Foundations
 
 ### Day 1 — Repo skeleton + compose scaffold (infra only, no app code)
-- [ ] Create monorepo layout: `services/{gateway,router,worker}/`, `mcp/`, `deploy/`, `experiments/`, `eval/`, `docs/`
-- [ ] Write `docker-compose.yml` with just **Postgres, Qdrant, Redis** (no app services yet — vLLM comes Day 6)
-- [ ] `docker compose up` → confirm all three containers start and stay up
-- [ ] Add a `.env.example` with placeholder connection strings
-- [ ] Build log entry
+- [x] Create monorepo layout: `services/{gateway,router,worker}/`, `mcp/`, `deploy/`, `experiments/`, `eval/`, `docs/`
+- [x] Write `docker-compose.yml` with just **Postgres, Qdrant, Redis** (no app services yet — vLLM comes Day 6)
+- [x] `docker compose up` → confirm all three containers start and stay up
+- [x] Add a `.env.example` with placeholder connection strings
+- [x] Build log entry
 
 ### Day 2 — Seed data
 - [ ] Write Postgres schema: `units`, `conversations` tables (minimal columns — you'll extend in Phase 2)
