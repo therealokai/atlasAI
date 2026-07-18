@@ -52,3 +52,23 @@
 
     - next: Day 3 — CI skeleton + observability stubs (Prometheus/Grafana/
       OTel containers, no dashboards yet, just prove they boot).
+- Day 3:
+    - added CI skeleton: .github/workflows/ci.yml with 3 parallel jobs
+      (lint via ruff, test via pytest, docker-build for the gateway
+      Dockerfile). Kept dev tools (ruff, pytest) in a separate
+      requirements-dev.txt so they never end up in a production image.
+    - added a placeholder gateway Dockerfile (installs deps, no real app
+      yet — real app arrives Day 7) so CI's docker-build job has
+      something genuine to verify.
+    - wrote a real (if tiny) placeholder test that imports Day 2's models
+      and checks table names/columns, instead of a meaningless assert True.
+    - pushed a trivial commit, confirmed all 3 CI jobs green in the
+      Actions tab.
+    - added prometheus + grafana + otel-collector to docker-compose.yml.
+      prometheus scrapes only itself for now (no real app metrics exist
+      yet); grafana has no datasource wired in yet (manual one-time setup);
+      otel-collector uses a "debug" exporter since nothing sends it real
+      telemetry yet. All three verified booting cleanly, no crash-loops.
+    - next: Day 4 — add healthcheck blocks across all services and
+      confirm `docker compose ps` shows everything (healthy), not just
+      running.

@@ -1,0 +1,46 @@
+name: CI
+
+# Runs on every push and every PR — you want to know about a broken build
+# before it merges, not after.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install lint deps
+        run: pip install -r requirements-dev.txt
+      - name: Run ruff
+        run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install -r requirements-day2.txt
+          pip install -r requirements-dev.txt
+      - name: Run pytest
+        run: pytest tests/ -v
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build gateway image
+        # No push to a registry yet — that's a later-phase concern once
+        # there's an actual deploy target. Today this just proves the
+        # Dockerfile builds cleanly, which is the whole point at this stage.
+        run: docker build -t atlasai-gateway:ci -f Dockerfile .

@@ -1,0 +1,30 @@
+# Minimal collector config. No real traces/metrics/logs are being sent
+# yet — nothing in the stack is instrumented. The "debug" exporter just
+# prints anything it receives to its own container logs, which is enough
+# to prove the collector starts cleanly and its pipeline is wired
+# correctly. Swap in real exporters (Prometheus remote-write, Tempo,
+# Loki, etc.) once there's actual telemetry to send — likely Phase 2+
+# when the gateway/router services exist and get instrumented.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      exporters: [debug]
