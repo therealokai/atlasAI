@@ -195,6 +195,16 @@ services:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
  
+    healthcheck:
+      # Prometheus's own real readiness endpoint (not just "port open") —
+      # its image is busybox-based and ships wget, so this works out of
+      # the box, unlike OTel Collector below.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
   # ── grafana ──────────────────────────────────────────────────────────
   # Dashboard layer on top of Prometheus. Empty/default dashboards are
   # fine today per the checklist — the exit criteria is "it boots and I
@@ -210,8 +220,16 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
     depends_on:
-      - prometheus
+      prometheus:
+          condition: service_healthy
  
   # ── otel-collector ───────────────────────────────────────────────────
   # Vendor-neutral telemetry pipeline. Nothing sends it real data yet —
@@ -234,6 +252,16 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    healthcheck:
+      # Adminer's image is PHP/Debian-based with bash available, but no
+      # dedicated health endpoint of its own — a TCP check (same pattern
+      # as Qdrant) is the honest amount of rigor for a dev-only browsing
+      # tool that nothing else depends on.
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     depends_on:
       postgres:
         condition: service_healthy

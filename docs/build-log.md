@@ -44,7 +44,11 @@
                 docker exec -it realestate-postgres psql -U realestate -d realestate -c "SELECT count(*) FROM units;"
                 # → 1000 rows, correct
         ```
-    - Added another service called `adminer` to be UI for postgres, open `http://localhost:8080` then type credentials (server is `postgres`)
+    - Added another service called `adminer` to be UI for postgres, open 
+      ```bash
+          http://localhost:8080    
+      ```    
+      then type credentials (server is `postgres`)
     - known gap to remember: seed_data.py is NOT idempotent — re-running
       migrate again would insert another 1000 units on top of the existing
       ones. Fine for now (single dev, single run), but flagging it so
@@ -69,6 +73,30 @@
       yet); grafana has no datasource wired in yet (manual one-time setup);
       otel-collector uses a "debug" exporter since nothing sends it real
       telemetry yet. All three verified booting cleanly, no crash-loops.
+    - To check prometheus:
+      ```bash
+          http://localhost:9090/query
+      ```
+      go to Status → Targets, confirm the prometheus job shows UP.
+    - To check Grafana:
+      ```bash
+          http://localhost:3000/
+      ```
+      if it is open that's okay it means grafana works 
+      log in with admin / admin (I've changed the password don't forget it)
+    - To check OTel collector: 
+      Type:
+      ```bash
+        docker compose logs otel-collector
+      ``` 
+      you want to see it report the pipeline started, with no repeated crash/restart lines.
+
     - next: Day 4 — add healthcheck blocks across all services and
       confirm `docker compose ps` shows everything (healthy), not just
       running.
+
+- Day 4:
+  - Actually, we did nothing as almost all health checks were done in day 3 
+
+- Day 5:
+  - 

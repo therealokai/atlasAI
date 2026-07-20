@@ -30,16 +30,16 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 - [x] Build log entry
 
 ### Day 3 — CI + observability skeleton
-- [ ] Add CI config (GitHub Actions or similar): lint step + placeholder unit test + docker build step
-- [ ] Push a trivial change and confirm CI goes green
-- [ ] Add Prometheus + Grafana + OTel-collector as compose services (empty dashboards are fine — just prove they start)
-- [ ] Build log entry
+- [x] Add CI config (GitHub Actions or similar): lint step + placeholder unit test + docker build step
+- [x] Push a trivial change and confirm CI goes green
+- [x] Add Prometheus + Grafana + OTel-collector as compose services (empty dashboards are fine — just prove they start)
+- [x] Build log entry
 
 ### Day 4 — Wire health checks + browse sanity
-- [ ] Add `healthcheck:` blocks to every compose service (Postgres, Qdrant, Redis)
-- [ ] `docker compose up` → `docker compose ps` shows all services `healthy`, not just `running`
-- [ ] Browse seeded data in a UI: psql (or a GUI client) for Postgres, Qdrant's dashboard for the empty collections
-- [ ] Build log entry
+- [x] Add `healthcheck:` blocks to every compose service (Postgres, Qdrant, Redis)
+- [x] `docker compose up` → `docker compose ps` shows all services `healthy`, not just `running`
+- [x] Browse seeded data in a UI: psql (or a GUI client) for Postgres, Qdrant's dashboard for the empty collections
+- [x] Build log entry
 
 ### Day 5 — Phase 0 close-out (buffer day)
 - [ ] Catch up on anything slipped from Days 1–4

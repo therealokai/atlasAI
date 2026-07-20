@@ -17,7 +17,18 @@ exporters:
   debug:
     verbosity: basic
 
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    # This gives us a real HTTP /health endpoint (200 OK when the
+    # collector is up and its pipelines are wired correctly). It's
+    # NOT wired into a Docker Compose `healthcheck:` block below, because
+    # this image has no shell/curl/wget to run a check FROM — verify it
+    # manually (curl from your host, since the port is published) or
+    # from another container until that's worth automating.
+
 service:
+  extensions: [health_check]
   pipelines:
     traces:
       receivers: [otlp]
