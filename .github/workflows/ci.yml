@@ -44,4 +44,4 @@ jobs:
         # No push to a registry yet — that's a later-phase concern once
         # there's an actual deploy target. Today this just proves the
         # Dockerfile builds cleanly, which is the whole point at this stage.
-        run: docker build -t atlasai-gateway:ci -f Dockerfile .
+        run: docker build -t atlasai-gateway:ci -f services/gateway/Dockerfile .
