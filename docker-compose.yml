@@ -1,0 +1,346 @@
+services:
+  postgres:
+    # Official PostgreSQL image from Docker Hub.
+    image: postgres:16
+
+    # Fixed container name instead of Docker generating a random one.
+    container_name: realestate-postgres
+
+    # Automatically restart the container unless it was explicitly stopped.
+    #
+    # Possible values:
+    #   no              -> Never restart (default)
+    #   always          -> Always restart, even after manual stop
+    #   on-failure      -> Restart only if the container exits with an error
+    #   unless-stopped  -> Restart after reboot unless I manually stopped it
+    restart: unless-stopped
+
+    environment:
+      # Environment variables used by the PostgreSQL image during initialization.
+      #
+      # Syntax:
+      #   ${VARIABLE:-default}
+      #
+      # Means:
+      #   Use VARIABLE if it exists.
+      #   Otherwise use the value after ':'.
+      POSTGRES_USER: ${POSTGRES_USER:-realestate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-realestate}
+      POSTGRES_DB: ${POSTGRES_DB:-realestate}
+
+    ports:
+      - "5433:5432"
+
+      # Port mapping format:
+      #
+      #     HOST_PORT : CONTAINER_PORT
+      #
+      # Left side (5433):
+      #   Port exposed on my laptop.
+      #
+      # Right side (5432):
+      #   Port PostgreSQL listens to INSIDE the container.
+      #
+      # Requests flow like this:
+      #
+      # localhost:5433
+      #       │
+      #       ▼
+      # PostgreSQL container:5432
+      #
+      # My Ubuntu host already uses port 5432,
+      # so Docker exposes PostgreSQL on 5433 instead.
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+      # Persist PostgreSQL data.
+      #
+      # Without this volume:
+      # Removing the container deletes the database.
+      #
+      # With this volume:
+      # Data survives container recreation.
+
+    healthcheck:
+
+      # Command executed periodically to determine
+      # whether the container is actually ready.
+      #
+      # IMPORTANT:
+      # Running != Healthy
+      #
+      # PostgreSQL may take several seconds before
+      # accepting client connections.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-realestate} -d ${POSTGRES_DB:-realestate}"]
+
+      # Wait 5 seconds between each health check.
+      interval: 5s
+
+      # If the command takes longer than 5 seconds,
+      # mark that attempt as failed.
+      timeout: 5s
+
+      # After 10 consecutive failures,
+      # Docker marks the container as Unhealthy.
+      retries: 10
+
+      # Ignore health check failures during startup.
+      #
+      # Gives PostgreSQL time to initialize before
+      # Docker starts evaluating its health.
+      start_period: 10s
+
+  qdrant:
+    # Official Qdrant vector database image.
+    image: qdrant/qdrant:latest
+
+    container_name: realestate-qdrant
+
+    restart: unless-stopped
+
+    ports:
+      - "6333:6333"
+
+      # REST API
+      #
+      # Used by:
+      # - Python client
+      # - Dashboard
+      # - FastAPI
+      # - Browser
+
+      - "6334:6334"
+
+      # gRPC API
+      #
+      # Faster binary protocol than REST.
+      # Mainly used in production or high-performance systems.
+
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+      # Persist vector embeddings and indexes.
+
+    healthcheck:
+
+      # Open a TCP connection to port 6333.
+      #
+      # If connection succeeds:
+      #   Healthy
+      #
+      # Otherwise:
+      #   Unhealthy
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/6333'"]
+
+      # Run every 5 seconds.
+      interval: 5s
+
+      # Maximum execution time for one health check.
+      timeout: 5s
+
+      # Number of failures before marking unhealthy.
+      retries: 10
+
+      # Ignore failures during initial startup.
+      start_period: 10s
+
+  redis:
+    # Lightweight Redis image based on Alpine Linux.
+    image: redis:7-alpine
+
+    container_name: realestate-redis
+
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+      # Default Redis port.
+
+    volumes:
+      - redis_data:/data
+
+      # Persist Redis data if persistence (RDB/AOF)
+      # is enabled.
+
+    healthcheck:
+
+      # Ask Redis:
+      #
+      # PING
+      #
+      # Expected response:
+      #
+      # PONG
+      #
+      # If PONG is returned:
+      # Healthy.
+      test: ["CMD", "redis-cli", "ping"]
+
+      interval: 5s
+
+      timeout: 5s
+
+      retries: 10
+
+      start_period: 5s
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: realestate-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+ 
+    healthcheck:
+      # Prometheus's own real readiness endpoint (not just "port open") —
+      # its image is busybox-based and ships wget, so this works out of
+      # the box, unlike OTel Collector below.
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── grafana ──────────────────────────────────────────────────────────
+  # Dashboard layer on top of Prometheus. Empty/default dashboards are
+  # fine today per the checklist — the exit criteria is "it boots and I
+  # can log in," not "it has useful panels yet."
+  grafana:
+    image: grafana/grafana:latest
+    container_name: realestate-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+    depends_on:
+      prometheus:
+          condition: service_healthy
+ 
+  # ── otel-collector ───────────────────────────────────────────────────
+  # Vendor-neutral telemetry pipeline. Nothing sends it real data yet —
+  # today's job is just proving the collector itself starts without
+  # crash-looping on its pipeline config.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: realestate-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./deploy/otel-collector/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  adminer:
+    image: adminer:latest
+    container_name: realestate-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # Adminer's image is PHP/Debian-based with bash available, but no
+      # dedicated health endpoint of its own — a TCP check (same pattern
+      # as Qdrant) is the honest amount of rigor for a dev-only browsing
+      # tool that nothing else depends on.
+      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # ── migrate ──────────────────────────────────────────────────────────
+  # A ONE-OFF task, not a long-running server. It boots, does its job
+  # (create tables + seed data), and exits. It never needs to be "always on"
+  # like postgres/qdrant/redis, so it's structured differently from them.
+  migrate:
+    image: python:3.12-slim
+    # Plain python:3.12-slim, not a custom-built image — we don't have our
+    # own Dockerfile yet (that comes when the gateway becomes a real app in
+    # Phase 1/Day 7). For a throwaway setup task, a stock image + pip install
+    # at runtime is fine; we're not optimizing image build time here.
+    container_name: realestate-migrate
+ 
+    profiles: ["tools"]
+    # THIS IS THE KEY LINE. Any service tagged with a profile is IGNORED by
+    # a plain `docker compose up`. Without this, migrate would try to start
+    # every time you bring the stack up, re-run pip install + reseed data,
+    # and slow down (or duplicate-seed) your normal dev loop. Tagging it
+    # "tools" means: only runs when explicitly asked for.
+ 
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Don't just wait for the postgres CONTAINER to exist — wait for its
+    # healthcheck to pass. Without `condition: service_healthy`, Compose
+    # would only guarantee postgres has started, not that it's actually
+    # accepting connections yet — migrate would race it and fail.
+ 
+    working_dir: /app
+    volumes:
+      - ./:/app
+    # These two lines together mean: take my entire repo (the `.` on my
+    # host) and mount it at /app INSIDE the container, then cd into /app.
+    # This is why we don't need to COPY files into a custom image — the
+    # container just sees your live repo directly. Edit a file on your
+    # host, it's immediately visible inside the container on next run.
+ 
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-realestate}:${POSTGRES_PASSWORD:-realestate}@postgres:5432/${POSTGRES_DB:-realestate}
+    # Notice the hostname here is "postgres" — the COMPOSE SERVICE NAME —
+    # not "localhost". Docker Compose gives every service a DNS entry equal
+    # to its service name, reachable only from OTHER containers on the same
+    # compose network. This is the whole reason migrate exists as a
+    # container instead of a script on your host: your host reaches
+    # Postgres via localhost:5432 (published port), but every other
+    # container (gateway, worker, migrate) reaches it via postgres:5432
+    # (internal network). This env line matches what your REAL gateway
+    # service will use later — that's the point of testing it now.
+ 
+    command: >
+      sh -c "pip install --quiet -r requirements-day2.txt &&
+             python services/gateway/models.py &&
+             python services/gateway/seed_data.py"
+    # Three steps chained with && (each must succeed before the next runs):
+    #   1. Install sqlalchemy/psycopg2/Faker inside the container (the
+    #      stock python:3.11-slim image has none of these by default)
+    #   2. Run models.py — calls Base.metadata.create_all(), which is
+    #      IDEMPOTENT: creates tables only if missing, does nothing if they
+    #      already exist. Safe to re-run this whole service anytime.
+    #   3. Run seed_data.py — inserts 1000 units + writes 30 sample docs.
+    #      NOT idempotent yet (re-running adds another 1000 rows) — worth
+    #      remembering as a known gap, not something to fix today.
+
+
+volumes:
+
+  # Named Docker volume.
+  #
+  # Stored outside containers.
+  #
+  # Deleting a container does NOT delete this volume.
+  postgres_data:
+
+  qdrant_data:
+
+  redis_data:
+
+  prometheus_data:
+  grafana_data:

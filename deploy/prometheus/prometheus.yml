@@ -1,0 +1,11 @@
+# Minimal config. Nothing in the stack exposes app metrics yet (vLLM
+# arrives Day 6, and even then wiring its metrics into Prometheus is a
+# later step). Scraping Prometheus's own /metrics endpoint is just enough
+# to prove the container boots and the scrape loop actually runs.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
