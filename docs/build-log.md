@@ -99,4 +99,5 @@
   - Actually, we did nothing as almost all health checks were done in day 3 
 
 - Day 5:
-  - 
+  - Created a small document about phase0
+

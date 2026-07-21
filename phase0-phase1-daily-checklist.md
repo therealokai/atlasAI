@@ -42,10 +42,10 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 - [x] Build log entry
 
 ### Day 5 — Phase 0 close-out (buffer day)
-- [ ] Catch up on anything slipped from Days 1–4
-- [ ] Write a short **Phase 0 exit report** (5–10 lines) in `docs/`: what exists, what the exit criteria were, confirm all green
-- [ ] Exit criteria check: ✅ `docker compose up` → health checks green ✅ seeded data browsable via psql/Qdrant UI
-- [ ] Build log entry — explicitly write "Phase 0 done, starting Phase 1 tomorrow"
+- [x] Catch up on anything slipped from Days 1–4
+- [x] Write a short **Phase 0 exit report** (5–10 lines) in `docs/`: what exists, what the exit criteria were, confirm all green
+- [x] Exit criteria check: ✅ `docker compose up` → health checks green ✅ seeded data browsable via psql/Qdrant UI
+- [x] Build log entry — explicitly write "Phase 0 done, starting Phase 1 tomorrow"
 
 **Do not start Day 6 until Day 5's checklist is fully checked.** This is the discipline, not a formality.
 
