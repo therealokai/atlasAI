@@ -72,17 +72,17 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 - [x] Build log entry
 
 ### Day 9 — Load testing setup
-- [ ] Write a k6 script that replays the golden set against `/v1/chat`
-- [ ] Add Prometheus scraping of vLLM's built-in metrics endpoint
-- [ ] Run k6 once at concurrency 1 just to confirm the harness works end-to-end (don't trust numbers yet — this is a plumbing check)
-- [ ] Build log entry
+- [x] Write a k6 script that replays the golden set against `/v1/chat`
+- [x] Add Prometheus scraping of vLLM's built-in metrics endpoint
+- [x] Run k6 once at concurrency 1 just to confirm the harness works end-to-end (don't trust numbers yet — this is a plumbing check)
+- [x] Build log entry
 
 ### Day 10 — Baseline report + Phase 1 close-out
-- [ ] Run k6 at concurrency **1, 4, 16, 64**
-- [ ] Record p95 TTFT, TPOT, throughput at each level in `experiments/baseline-report.md`
-- [ ] Compare against your SLO targets from §1.3 (p95 TTFT < 1.5s for tiny/strong tier) — just record where you stand, don't panic if you're not there yet
-- [ ] Exit criteria check: ✅ baseline report exists with real numbers at all four concurrency levels
-- [ ] Build log entry — this baseline number is the one you'll quote for months, so make sure it's written down somewhere durable, not just in your head
+- [x] Run k6 at concurrency **1, 4, 16, 64**
+- [x] Record p95 TTFT, TPOT, throughput at each level in `experiments/baseline-report.md`
+- [x] Compare against your SLO targets from §1.3 (p95 TTFT < 1.5s for tiny/strong tier) — just record where you stand, don't panic if you're not there yet
+- [x] Exit criteria check: ✅ baseline report exists with real numbers at all four concurrency levels
+- [x] Build log entry — this baseline number is the one you'll quote for months, so make sure it's written down somewhere durable, not just in your head
 
 ---
 
