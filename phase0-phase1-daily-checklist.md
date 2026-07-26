@@ -42,10 +42,10 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 - [x] Build log entry
 
 ### Day 5 — Phase 0 close-out (buffer day)
-- [ ] Catch up on anything slipped from Days 1–4
-- [ ] Write a short **Phase 0 exit report** (5–10 lines) in `docs/`: what exists, what the exit criteria were, confirm all green
-- [ ] Exit criteria check: ✅ `docker compose up` → health checks green ✅ seeded data browsable via psql/Qdrant UI
-- [ ] Build log entry — explicitly write "Phase 0 done, starting Phase 1 tomorrow"
+- [x] Catch up on anything slipped from Days 1–4
+- [x] Write a short **Phase 0 exit report** (5–10 lines) in `docs/`: what exists, what the exit criteria were, confirm all green
+- [x] Exit criteria check: ✅ `docker compose up` → health checks green ✅ seeded data browsable via psql/Qdrant UI
+- [x] Build log entry — explicitly write "Phase 0 done, starting Phase 1 tomorrow"
 
 **Do not start Day 6 until Day 5's checklist is fully checked.** This is the discipline, not a formality.
 
@@ -54,22 +54,22 @@ Rule for every day: don't start until you've read yesterday's build-log entry. D
 ## PHASE 1 — Serving Baseline
 
 ### Day 6 — vLLM standalone (sort out GPU issues in isolation first)
-- [ ] Pick your T2 model per the design doc (e.g. Qwen2.5-14B AWQ-INT4 — fits ~10–16 GB on the L40S)
-- [ ] Install vLLM and serve the model **standalone**, outside compose, just `vllm serve ...` from the CLI
-- [ ] Confirm you can hit `/v1/chat/completions` directly with `curl` and get a real response
-- [ ] If you hit CUDA/driver issues, this is the day to fight them — don't let compose complexity hide a GPU problem
-- [ ] Build log entry
+- [x] Pick your T2 model per the design doc (e.g. Qwen2.5-14B AWQ-INT4 — fits ~10–16 GB on the L40S)
+- [x] Install vLLM and serve the model **standalone**, outside compose, just `vllm serve ...` from the CLI
+- [x] Confirm you can hit `/v1/chat/completions` directly with `curl` and get a real response
+- [x] If you hit CUDA/driver issues, this is the day to fight them — don't let compose complexity hide a GPU problem
+- [x] Build log entry
 
 ### Day 7 — Gateway + compose integration
-- [ ] Add vLLM as a service in `docker-compose.yml`
-- [ ] Build the tiny FastAPI gateway: `/health` (checks vLLM is reachable) + `/v1/chat` as a pure pass-through — **no router, no PII, no tools**
-- [ ] Confirm end-to-end: gateway `/v1/chat` → vLLM → real response
-- [ ] Build log entry
+- [x] Add vLLM as a service in `docker-compose.yml`
+- [x] Build the tiny FastAPI gateway: `/health` (checks vLLM is reachable) + `/v1/chat` as a pure pass-through — **no router, no PII, no tools**
+- [x] Confirm end-to-end: gateway `/v1/chat` → vLLM → real response
+- [x] Build log entry
 
 ### Day 8 — Golden-set v1
-- [ ] Write 100 real-estate-domain prompts in `eval/golden-set-v1.json` (mix: chit-chat, lookups, harder reasoning — even though tools/RAG aren't wired yet, the model still needs to *answer* something)
-- [ ] Sanity-run 5–10 of them through the gateway manually, eyeball response quality
-- [ ] Build log entry
+- [x] Write 100 real-estate-domain prompts in `eval/golden-set-v1.json` (mix: chit-chat, lookups, harder reasoning — even though tools/RAG aren't wired yet, the model still needs to *answer* something)
+- [x] Sanity-run 5–10 of them through the gateway manually, eyeball response quality
+- [x] Build log entry
 
 ### Day 9 — Load testing setup
 - [ ] Write a k6 script that replays the golden set against `/v1/chat`

@@ -194,7 +194,7 @@ services:
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
- 
+
     healthcheck:
       # Prometheus's own real readiness endpoint (not just "port open") —
       # its image is busybox-based and ships wget, so this works out of
@@ -230,7 +230,7 @@ services:
     depends_on:
       prometheus:
           condition: service_healthy
- 
+
   # ── otel-collector ───────────────────────────────────────────────────
   # Vendor-neutral telemetry pipeline. Nothing sends it real data yet —
   # today's job is just proving the collector itself starts without
@@ -251,13 +251,13 @@ services:
     container_name: realestate-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8082:8080"
     healthcheck:
       # Adminer's image is PHP/Debian-based with bash available, but no
       # dedicated health endpoint of its own — a TCP check (same pattern
       # as Qdrant) is the honest amount of rigor for a dev-only browsing
       # tool that nothing else depends on.
-      test: ["CMD-SHELL", "bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/8080'"]
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1',8080)?0:1);"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -272,19 +272,20 @@ services:
   # like postgres/qdrant/redis, so it's structured differently from them.
   migrate:
     image: python:3.12-slim
-    # Plain python:3.12-slim, not a custom-built image — we don't have our
-    # own Dockerfile yet (that comes when the gateway becomes a real app in
-    # Phase 1/Day 7). For a throwaway setup task, a stock image + pip install
-    # at runtime is fine; we're not optimizing image build time here.
+    # Plain python:3.12-slim, not a custom-built image — this one stays a
+    # throwaway setup task even after Day 7, since migrate only ever needs
+    # to run once per fresh DB and isn't a long-running server like the
+    # gateway now is. A stock image + pip install at runtime is fine here;
+    # we're not optimizing image build time for a one-off job.
     container_name: realestate-migrate
- 
+
     profiles: ["tools"]
     # THIS IS THE KEY LINE. Any service tagged with a profile is IGNORED by
     # a plain `docker compose up`. Without this, migrate would try to start
     # every time you bring the stack up, re-run pip install + reseed data,
     # and slow down (or duplicate-seed) your normal dev loop. Tagging it
     # "tools" means: only runs when explicitly asked for.
- 
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -292,7 +293,7 @@ services:
     # healthcheck to pass. Without `condition: service_healthy`, Compose
     # would only guarantee postgres has started, not that it's actually
     # accepting connections yet — migrate would race it and fail.
- 
+
     working_dir: /app
     volumes:
       - ./:/app
@@ -301,7 +302,7 @@ services:
     # This is why we don't need to COPY files into a custom image — the
     # container just sees your live repo directly. Edit a file on your
     # host, it's immediately visible inside the container on next run.
- 
+
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-realestate}:${POSTGRES_PASSWORD:-realestate}@postgres:5432/${POSTGRES_DB:-realestate}
     # Notice the hostname here is "postgres" — the COMPOSE SERVICE NAME —
@@ -312,21 +313,107 @@ services:
     # Postgres via localhost:5432 (published port), but every other
     # container (gateway, worker, migrate) reaches it via postgres:5432
     # (internal network). This env line matches what your REAL gateway
-    # service will use later — that's the point of testing it now.
- 
+    # service uses below — that's the point of testing it now.
+
     command: >
-      sh -c "pip install --quiet -r requirements-day2.txt &&
+      sh -c "pip install --quiet -r requirements-dev.txt &&
              python services/gateway/models.py &&
              python services/gateway/seed_data.py"
     # Three steps chained with && (each must succeed before the next runs):
     #   1. Install sqlalchemy/psycopg2/Faker inside the container (the
-    #      stock python:3.11-slim image has none of these by default)
+    #      stock python:3.12-slim image has none of these by default)
     #   2. Run models.py — calls Base.metadata.create_all(), which is
     #      IDEMPOTENT: creates tables only if missing, does nothing if they
     #      already exist. Safe to re-run this whole service anytime.
     #   3. Run seed_data.py — inserts 1000 units + writes 30 sample docs.
     #      NOT idempotent yet (re-running adds another 1000 rows) — worth
     #      remembering as a known gap, not something to fix today.
+
+  # ── vllm ─────────────────────────────────────────────────────────────
+  # The T2 model server. Standalone-tested on Day 6 (awq_marlin +
+  # TRITON_ATTN for the Blackwell/SM_120 laptop GPU) — today is just
+  # moving that exact working config into compose. If this breaks in
+  # compose but worked standalone, the problem is compose GPU passthrough
+  # or networking, NOT the model or vLLM flags — don't re-debug Day 6.
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: realestate-vllm
+    restart: unless-stopped
+    environment:
+      VLLM_USE_FLASHINFER_SAMPLER: "0"
+
+    # GPU passthrough for Compose (non-swarm syntax). Requires the
+    # nvidia-container-toolkit installed on the host. Sanity-check this
+    # independently BEFORE blaming vLLM if the container won't see the GPU:
+    #   docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+    gpus: all
+    # vLLM's CUDA graph capture and shared-memory tensor ops want more
+    # than Docker's 64MB default shm — too small here shows up as
+    # mysterious crashes that look GPU-related but aren't.
+    shm_size: "2gb"
+
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+      # Persist downloaded model weights across container recreation —
+      # without this, every `docker compose up` after a `down` re-pulls
+      # several GB from Hugging Face.
+
+    ports:
+      - "8000:8000"
+
+    command: >
+      --model Qwen/Qwen2.5-3B-Instruct-AWQ
+      --gpu-memory-utilization 0.55
+      --max-model-len 4096
+      --quantization awq_marlin
+      --attention-backend TRITON_ATTN
+      --host 0.0.0.0
+      --port 8000
+
+    healthcheck:
+      # vLLM's image doesn't reliably ship curl/wget, but python always
+      # will since vLLM itself needs it — same "use what's honestly
+      # available" logic as the Qdrant/Adminer TCP checks above.
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # Long start_period: first boot downloads several GB from HF and
+      # loads weights onto the GPU. Don't let Compose mark it unhealthy
+      # while it's doing legitimate first-run work.
+      start_period: 180s
+
+  # ── gateway ──────────────────────────────────────────────────────────
+  # First REAL app service — has its own Dockerfile now (services/gateway/),
+  # not a stock image + pip install like migrate above. Deliberately dumb
+  # today: /health + a pure pass-through /v1/chat. No router, no PII
+  # scrubbing, no tool calls — that's Phase 2+.
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    container_name: realestate-gateway
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+      # Host 8081 because 8080 is already taken by adminer above.
+    environment:
+      VLLM_BASE_URL: http://vllm:8000
+      # Same compose-service-name DNS trick migrate uses for postgres:
+      # "vllm" resolves inside the compose network, not from your host.
+    depends_on:
+      vllm:
+        condition: service_healthy
+        # Wait for vLLM's healthcheck, not just container start — otherwise
+        # the gateway's first requests would race vLLM's multi-minute
+        # weight-loading window and fail for a reason that has nothing to
+        # do with the gateway code itself.
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
 
 volumes:
@@ -344,3 +431,4 @@ volumes:
 
   prometheus_data:
   grafana_data:
+  huggingface_cache:
