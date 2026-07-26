@@ -100,4 +100,27 @@
 
 - Day 5:
   - Created a small document about phase0
-
+- Day 6:
+  - Tried `Qwen/Qwen2.5-3B-Instruct-AWQ` and it worked well on my laptop and I had to run `export VLLM_USE_FLASHINFER_SAMPLER=0` first.
+- Day 7:
+  - added `vllm/vllm-openai:latest` as a service with docker compose file
+  - Created simple `fastapi` app with `health` and `chat` to test vLLM.
+  - wired vllm + gateway into compose, gateway/health passes through to vllm/health,
+  - to test vllm: `curl http://localhost:8081/health`
+  - the actual pass:
+    ```bash
+    curl http://localhost:8000/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d '{
+      "model": "Qwen/Qwen2.5-3B-Instruct-AWQ",
+      "messages": [
+        {
+          "role": "user",
+          "content": "مرحبا، عرفني بنفسك باختصار"
+        }
+      ]
+    }'
+    ```
+  - next question: does gateway need a request timeout retry before Day 8's golden-set run hits it at volume?
+- Day 8:
+  - Created `run_golden_set.py` script to run on the `golden-set-v1.json` with vLLM with model `Qwen/Qwen2.5-3B-Instruct-AWQ` and save the response and the model name
