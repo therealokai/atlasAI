@@ -14,16 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo to Github VM
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
       
       - name: checkout repo to Github VM
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install lint deps
-        run: pip install -r requirements-dev.txt
+        run: |
+          pip install -r requirements-dev.txt
+          pip install ruff
 
       - name: Run ruff
         run: ruff check .
@@ -32,13 +34,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo to Github VM
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
       
       - name: Instal python environment
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
-            python-version: "3.12"
-            cache: "pip"
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Install deps
         run: |
@@ -52,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo to Github VM
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
       
       - name: Build gateway image
         run: docker build -t atlasai-gateway:ci -f services/gateway/Dockerfile .
