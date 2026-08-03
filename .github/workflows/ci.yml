@@ -3,50 +3,62 @@ name: CI
 # Runs on every push and every PR — you want to know about a broken build
 # before it merges, not after.
 on:
-  workflow_dispatch:
+  workflow_dispatch: # on manual workflow run
   push:
-    branches: ["**"]
+    branches: ["**"] # on push over all branches
   pull_request:
-    branches: ["**"]
+    branches: ["**"] # on pR over all branches
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - name: checkout repo to Github VM
+        uses: actions/checkout@v5
+      
+      - name: checkout repo to Github VM
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: "pip"
+
       - name: Install lint deps
         run: pip install -r requirements-dev.txt
+
       - name: Run ruff
         run: ruff check .
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - name: checkout repo to Github VM
+        uses: actions/checkout@v5
+      
+      - name: Instal python environment
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-          cache: "pip"
+            python-version: "3.12"
+            cache: "pip"
+
       - name: Install deps
         run: |
           pip install -r requirements-day2.txt
           pip install -r requirements-dev.txt
+
       - name: Run pytest
         run: pytest tests/ -v
 
   docker-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: checkout repo to Github VM
+        uses: actions/checkout@v5
+      
       - name: Build gateway image
-        # Deliberately just `docker build`, never `docker compose up`, and
-        # vLLM is never involved here. GitHub-hosted runners have no GPU,
-        # so vLLM would crash on startup if we tried to run it in CI — this
-        # job's only job is proving the Dockerfile builds cleanly. Full
-        # gateway+vLLM integration testing has to happen locally (or on a
-        # self-hosted GPU runner later), not here.
         run: docker build -t atlasai-gateway:ci -f services/gateway/Dockerfile .
+      # Deliberately just `docker build`, never `docker compose up`, and
+      # vLLM is never involved here. GitHub-hosted runners have no GPU,
+      # so vLLM would crash on startup if we tried to run it in CI — this
+      # job's only job is proving the Dockerfile builds cleanly. Full
+      # gateway+vLLM integration testing has to happen locally (or on a
+      # self-hosted GPU runner later), not here. - totally agree
