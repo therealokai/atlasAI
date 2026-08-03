@@ -7,12 +7,12 @@ Still, a bare `assert True` proves nothing about the pipeline actually
 working, so this checks something real and cheap: that yesterday's models
 import cleanly and have the table names we expect.
 """
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "services", "gateway"))
 
-from models import Unit, Conversation  # noqa: E402
+from models import Conversation, Unit
 
 
 def test_unit_table_name():
