@@ -316,7 +316,7 @@ services:
     # service uses below — that's the point of testing it now.
 
     command: >
-      sh -c "pip install --quiet -r requirements-dev.txt &&
+      sh -c "pip install --quiet -r services/gateway/requirements-dev.txt &&
              python services/gateway/models.py &&
              python services/gateway/seed_data.py"
     # Three steps chained with && (each must succeed before the next runs):
