@@ -26,7 +26,6 @@ jobs:
       - name: Install lint deps
         run: |
           pip install -r requirements-dev.txt
-          pip install ruff
 
       - name: Run ruff
         run: ruff check .

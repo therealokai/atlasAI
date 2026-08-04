@@ -3,7 +3,7 @@ import os
 import time
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -82,7 +82,7 @@ def run_smoke_test():
         print(" [ ] Did it follow the instruction / system prompt?")
         print(" [ ] Is the response length and structure coherent?")
         
-    except Exception as e:
+    except OpenAIError as e:
         print(f"❌ Connection error or vLLM failure: {e}")
 
 if __name__ == "__main__":
