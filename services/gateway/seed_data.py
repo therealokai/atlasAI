@@ -6,9 +6,9 @@ you can point a script at later).
 """
 import random
 from pathlib import Path
-from faker import Faker
 
-from models import get_session, Unit, Conversation
+from faker import Faker
+from models import Conversation, Unit, get_session
 
 fake = Faker()
 

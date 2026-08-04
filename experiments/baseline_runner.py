@@ -58,7 +58,7 @@ def parse_buckets(text: str, metric: str) -> dict[float, float]:
 def parse_counter(text: str, metric: str) -> float:
     total = 0.0
     for line in text.splitlines():
-        if line.startswith(metric + "{") or line.startswith(metric + " "):
+        if line.startswith((metric + "{", metric + " ")):
             m = re.search(r"\s([0-9.eE+]+)$", line)
             if m:
                 total += float(m.group(1))
@@ -124,7 +124,7 @@ def run_k6(concurrency: int) -> str:
         "/eval/k6-golden-set.js",
     ]
     print(f"\n=== k6 @ concurrency {concurrency} ===")
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
     print(proc.stdout[-1500:])
     if proc.returncode != 0:
         print(proc.stderr[-1000:])
@@ -179,14 +179,20 @@ def write_report(rows: list[dict], path: Path):
         "# Phase 1 Baseline Report",
         "",
         f"**Generated:** {ts}  ",
-        "**Hardware:** RTX 5060 Laptop GPU (8 GB) — *NOT* the L40S (48 GB) the design "
-        "doc's SLOs assume. Numbers here are a laptop floor; re-run on the L40S for the "
-        "real baseline.  ",
-        "**Model:** Qwen/Qwen2.5-3B-Instruct-AWQ (`awq_marlin`, `--max-model-len 4096`, "
-        "`--gpu-memory-utilization 0.55`)  ",
+        (
+            "**Hardware:** RTX 5060 Laptop GPU (8 GB) — *NOT* the L40S (48 GB) the design "
+            "doc's SLOs assume. Numbers here are a laptop floor; re-run on the L40S for the "
+            "real baseline.  "
+        ),
+        (
+            "**Model:** Qwen/Qwen2.5-3B-Instruct-AWQ (`awq_marlin`, `--max-model-len 4096`, "
+            "`--gpu-memory-utilization 0.55`)  "
+        ),
         "**Workload:** eval/golden-set-v1.json (200 prompts) replayed via eval/k6-golden-set.js  ",
-        "**Latency sources:** TTFT/TPOT/token-throughput = vLLM `/metrics` (server-side); "
-        "end-to-end p95 + req throughput = k6 (client-side).",
+        (
+            "**Latency sources:** TTFT/TPOT/token-throughput = vLLM `/metrics` (server-side); "
+            "end-to-end p95 + req throughput = k6 (client-side)."
+        ),
         "",
         "| Concurrency | p95 TTFT | p95 TPOT | p95 end-to-end | Throughput | Tokens/s | Failed |",
         "|---|---|---|---|---|---|---|",
@@ -211,9 +217,11 @@ def write_report(rows: list[dict], path: Path):
         "| p95 end-to-end (tool call included) | < 8 s | no tools wired yet (Phase 2) — pure generation |",
         "| Request success rate | ≥ 99.5% | 100% (0 failures) across all levels |",
         "",
-        "> These targets were written for the L40S. On an 8 GB laptop card the point is "
-        "not to *hit* them but to have a durable, honest number to quote and to re-measure "
-        "against once the L40S is in place.",
+        (
+            "> These targets were written for the L40S. On an 8 GB laptop card the point is "
+            "not to *hit* them but to have a durable, honest number to quote and to re-measure "
+            "against once the L40S is in place."
+        ),
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")

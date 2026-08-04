@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -11,8 +11,8 @@ logger = logging.getLogger("gateway")
 # "vllm" here is the Compose SERVICE NAME, same DNS trick your migrate
 # service already relies on for postgres — only resolves inside the
 # compose network, not from your host.
-VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://vllm:8000")
-REQUEST_TIMEOUT = float(os.getenv("GATEWAY_TIMEOUT", "60"))
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL")
+REQUEST_TIMEOUT = float(os.getenv("GATEWAY_TIMEOUT"))
 
 app = FastAPI(title="Real Estate AI Gateway", version="0.1.0")
 

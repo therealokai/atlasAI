@@ -3,12 +3,20 @@ SQLAlchemy models for the real estate AI agent project.
 Phase 0 scope: minimal columns only. Phase 2 will extend this
 (embeddings refs, tool-call logs, etc.) — that's when Alembic gets introduced.
 """
+import os
 from datetime import datetime
+
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Float, Text, DateTime, Boolean
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    Text,
+    create_engine,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
-import os
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
