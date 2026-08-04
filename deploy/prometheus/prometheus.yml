@@ -1,7 +1,7 @@
-# Minimal config. Nothing in the stack exposes app metrics yet (vLLM
-# arrives Day 6, and even then wiring its metrics into Prometheus is a
-# later step). Scraping Prometheus's own /metrics endpoint is just enough
-# to prove the container boots and the scrape loop actually runs.
+# Day 9: added the vLLM scrape job. vLLM ships a Prometheus-format
+# /metrics endpoint out of the box (TTFT/TPOT/e2e-latency histograms,
+# token throughput, queue depth) — this is where Day 10's p95 numbers
+# actually come from. The k6 script only generates the traffic.
 global:
   scrape_interval: 15s
 
@@ -9,3 +9,10 @@ scrape_configs:
   - job_name: "prometheus"
     static_configs:
       - targets: ["localhost:9090"]
+
+  # "vllm" is the compose SERVICE NAME — Prometheus reaches it over the
+  # internal compose network (not localhost, which inside this container
+  # is Prometheus itself). Default metrics_path /metrics is correct.
+  - job_name: "vllm"
+    static_configs:
+      - targets: ["vllm:8000"]
